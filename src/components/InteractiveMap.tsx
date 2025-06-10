@@ -21,9 +21,17 @@ L.Icon.Default.mergeOptions({
 
 interface InteractiveMapProps {
   selectedCategory?: "oceans" | "countries" | "mountains";
+  onMapClick?: (item: any) => void;
+  highlightTarget?: any;
+  disabled?: boolean;
 }
 
-export const InteractiveMap = ({ selectedCategory = "oceans" }: InteractiveMapProps) => {
+export const InteractiveMap = ({ 
+  selectedCategory = "oceans", 
+  onMapClick,
+  highlightTarget,
+  disabled = false 
+}: InteractiveMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
@@ -43,12 +51,16 @@ export const InteractiveMap = ({ selectedCategory = "oceans" }: InteractiveMapPr
   };
 
   // Create custom icons for different categories
-  const createCustomIcon = (color: string) => {
+  const createCustomIcon = (color: string, isTarget = false) => {
+    const size = isTarget ? 25 : 20;
+    const border = isTarget ? '4px solid #ffffff' : '3px solid white';
+    const animation = isTarget ? 'animation: pulse 2s infinite;' : '';
+    
     return L.divIcon({
       className: 'custom-div-icon',
-      html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
+      html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: ${border}; box-shadow: 0 2px 6px rgba(0,0,0,0.4); ${animation}"></div>`,
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2]
     });
   };
 
@@ -65,7 +77,7 @@ export const InteractiveMap = ({ selectedCategory = "oceans" }: InteractiveMapPr
       minZoom: 1
     }).addTo(mapInstance.current);
 
-    // Add global styles for tooltips
+    // Add global styles for tooltips and animations
     const style = document.createElement('style');
     style.textContent = `
       .custom-tooltip {
@@ -78,6 +90,11 @@ export const InteractiveMap = ({ selectedCategory = "oceans" }: InteractiveMapPr
       }
       .custom-tooltip::before {
         border-top-color: rgba(0, 0, 0, 0.8) !important;
+      }
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
       }
     `;
     document.head.appendChild(style);
@@ -93,6 +110,10 @@ export const InteractiveMap = ({ selectedCategory = "oceans" }: InteractiveMapPr
   }, []);
 
   useEffect(() => {
+    setMapCategory(selectedCategory);
+  }, [selectedCategory]);
+
+  useEffect(() => {
     if (!mapInstance.current) return;
 
     // Clear existing markers
@@ -103,32 +124,59 @@ export const InteractiveMap = ({ selectedCategory = "oceans" }: InteractiveMapPr
 
     // Add new markers for current category
     const currentData = geographyData[mapCategory];
-    const icon = createCustomIcon(categoryColors[mapCategory]);
-
+    
     currentData.forEach((item) => {
       if (!item.coordinates) return;
+
+      const isTarget = highlightTarget && item.name === highlightTarget.name;
+      const icon = createCustomIcon(categoryColors[mapCategory], isTarget);
 
       const marker = L.marker([item.coordinates[1], item.coordinates[0]], { icon })
         .addTo(mapInstance.current!)
         .on('click', () => {
-          setSelectedItem(item);
+          if (onMapClick && !disabled) {
+            onMapClick(item);
+          } else {
+            setSelectedItem(item);
+          }
         });
 
-      // Add tooltip
-      marker.bindTooltip(item.name, {
-        permanent: false,
-        direction: 'top',
-        className: 'custom-tooltip'
-      });
+      // Add tooltip only if not in challenge mode
+      if (!onMapClick) {
+        marker.bindTooltip(item.name, {
+          permanent: false,
+          direction: 'top',
+          className: 'custom-tooltip'
+        });
+      }
 
       markersRef.current.push(marker);
     });
-  }, [mapCategory]);
+  }, [mapCategory, highlightTarget, onMapClick, disabled]);
 
   const handleCategoryChange = (category: "oceans" | "countries" | "mountains") => {
     setMapCategory(category);
     setSelectedItem(null);
   };
+
+  // If used in challenge mode, don't show category buttons or selected item
+  if (onMapClick) {
+    return (
+      <Card className="p-4">
+        <div className="relative rounded-lg overflow-hidden border">
+          <div 
+            ref={mapRef} 
+            className={`h-96 w-full ${disabled ? 'pointer-events-none opacity-75' : 'cursor-crosshair'}`}
+            style={{ height: '400px' }}
+          />
+        </div>
+        
+        <p className="text-sm text-muted-foreground mt-2">
+          {disabled ? "Warte auf die nächste Frage..." : "Klicke auf den gesuchten Ort auf der Karte!"}
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
