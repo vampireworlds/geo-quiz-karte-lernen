@@ -65,11 +65,30 @@ export const InteractiveMap = ({ selectedCategory = "oceans" }: InteractiveMapPr
       minZoom: 1
     }).addTo(mapInstance.current);
 
+    // Add global styles for tooltips
+    const style = document.createElement('style');
+    style.textContent = `
+      .custom-tooltip {
+        background-color: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 4px 8px !important;
+        font-size: 12px !important;
+      }
+      .custom-tooltip::before {
+        border-top-color: rgba(0, 0, 0, 0.8) !important;
+      }
+    `;
+    document.head.appendChild(style);
+
     return () => {
       if (mapInstance.current) {
         mapInstance.current.remove();
         mapInstance.current = null;
       }
+      // Clean up style
+      document.head.removeChild(style);
     };
   }, []);
 
@@ -133,19 +152,6 @@ export const InteractiveMap = ({ selectedCategory = "oceans" }: InteractiveMapPr
             className="h-96 w-full"
             style={{ height: '400px' }}
           />
-          <style jsx global>{`
-            .custom-tooltip {
-              background-color: rgba(0, 0, 0, 0.8);
-              color: white;
-              border: none;
-              border-radius: 4px;
-              padding: 4px 8px;
-              font-size: 12px;
-            }
-            .custom-tooltip::before {
-              border-top-color: rgba(0, 0, 0, 0.8);
-            }
-          `}</style>
         </div>
         
         <p className="text-sm text-muted-foreground mt-2">
