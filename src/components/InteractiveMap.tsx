@@ -133,49 +133,12 @@ export const InteractiveMap = ({
 
 useEffect(() => {
   if (mapInstance.current) {
-    // Marker entfernen
-    markersRef.current.forEach(marker => {
-      mapInstance.current?.removeLayer(marker);
-    });
-    markersRef.current = [];
-
-    // Wenn `disabled` false ist, Marker erneut hinzufügen
-    if (!disabled) {
-      const currentData = geographyData[mapCategory];
-      currentData.forEach((item) => {
-        if (!item.coordinates) return;
-
-        const isTarget = highlightTarget && item.name === highlightTarget.name;
-        const icon = createCustomIcon(categoryColors[mapCategory], isTarget);
-
-        const marker = L.marker([item.coordinates[1], item.coordinates[0]], { icon })
-          .addTo(mapInstance.current!)
-          .on('click', () => {
-            if (onMapClick && !disabled) {
-              onMapClick(item);
-            } else {
-              setSelectedItem(item);
-            }
-          });
-
-        if (!onMapClick) {
-          marker.bindTooltip(item.name, {
-            permanent: false,
-            direction: 'top',
-            className: 'custom-tooltip'
-          });
-        }
-
-        markersRef.current.push(marker);
-      });
-    }
-
-    // Map-Layout aktualisieren
     setTimeout(() => {
       mapInstance.current?.invalidateSize();
     }, 100);
   }
 }, [disabled]);
+
 
 
   useEffect(() => {
