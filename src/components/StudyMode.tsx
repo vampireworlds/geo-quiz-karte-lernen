@@ -4,13 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { geographyData } from "@/data/geographyData";
-import { MapContainer } from "./MapContainer";
+import { SimpleMap } from "./SimpleMap";
 
-interface StudyModeProps {
-  mapboxToken: string;
-}
-
-export const StudyMode = ({ mapboxToken }: StudyModeProps) => {
+export const StudyMode = () => {
   const [selectedCategory, setSelectedCategory] = useState<"oceans" | "countries" | "mountains">("oceans");
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
@@ -91,7 +87,7 @@ export const StudyMode = ({ mapboxToken }: StudyModeProps) => {
           </Card>
         )}
         
-        <MapContainer mapboxToken={mapboxToken} />
+        <SimpleMap selectedCategory={selectedCategory} />
       </div>
     </div>
   );
