@@ -1,0 +1,176 @@
+
+import React, { useEffect, useRef, useState } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { geographyData } from "@/data/geographyData";
+
+// Fix for default markers in Leaflet
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
+
+interface InteractiveMapProps {
+  selectedCategory?: "oceans" | "countries" | "mountains";
+}
+
+export const InteractiveMap = ({ selectedCategory = "oceans" }: InteractiveMapProps) => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<L.Map | null>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [mapCategory, setMapCategory] = useState<"oceans" | "countries" | "mountains">(selectedCategory);
+
+  const categoryColors = {
+    oceans: "#3b82f6", // blue
+    countries: "#10b981", // green
+    mountains: "#f59e0b" // orange
+  };
+
+  const categoryTitles = {
+    oceans: "Ozeane & Meere",
+    countries: "Länder & Kontinente",
+    mountains: "Gebirge & Berge"
+  };
+
+  // Create custom icons for different categories
+  const createCustomIcon = (color: string) => {
+    return L.divIcon({
+      className: 'custom-div-icon',
+      html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+  };
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Initialize map
+    mapInstance.current = L.map(mapRef.current).setView([20, 0], 2);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 10,
+      minZoom: 1
+    }).addTo(mapInstance.current);
+
+    return () => {
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mapInstance.current) return;
+
+    // Clear existing markers
+    markersRef.current.forEach(marker => {
+      mapInstance.current?.removeLayer(marker);
+    });
+    markersRef.current = [];
+
+    // Add new markers for current category
+    const currentData = geographyData[mapCategory];
+    const icon = createCustomIcon(categoryColors[mapCategory]);
+
+    currentData.forEach((item) => {
+      if (!item.coordinates) return;
+
+      const marker = L.marker([item.coordinates[1], item.coordinates[0]], { icon })
+        .addTo(mapInstance.current!)
+        .on('click', () => {
+          setSelectedItem(item);
+        });
+
+      // Add tooltip
+      marker.bindTooltip(item.name, {
+        permanent: false,
+        direction: 'top',
+        className: 'custom-tooltip'
+      });
+
+      markersRef.current.push(marker);
+    });
+  }, [mapCategory]);
+
+  const handleCategoryChange = (category: "oceans" | "countries" | "mountains") => {
+    setMapCategory(category);
+    setSelectedItem(null);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4">
+        <div className="flex flex-wrap gap-2 mb-4">
+          {Object.entries(categoryTitles).map(([key, title]) => (
+            <Button
+              key={key}
+              variant={mapCategory === key ? "default" : "outline"}
+              onClick={() => handleCategoryChange(key as any)}
+              className="text-sm"
+            >
+              {title}
+            </Button>
+          ))}
+        </div>
+        
+        <div className="relative rounded-lg overflow-hidden border">
+          <div 
+            ref={mapRef} 
+            className="h-96 w-full"
+            style={{ height: '400px' }}
+          />
+          <style jsx global>{`
+            .custom-tooltip {
+              background-color: rgba(0, 0, 0, 0.8);
+              color: white;
+              border: none;
+              border-radius: 4px;
+              padding: 4px 8px;
+              font-size: 12px;
+            }
+            .custom-tooltip::before {
+              border-top-color: rgba(0, 0, 0, 0.8);
+            }
+          `}</style>
+        </div>
+        
+        <p className="text-sm text-muted-foreground mt-2">
+          Klicke auf die farbigen Punkte auf der Karte, um mehr Informationen zu erhalten.
+        </p>
+      </Card>
+
+      {selectedItem && (
+        <Card className="p-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">{selectedItem.name}</h3>
+              <Badge 
+                className="text-white"
+                style={{ backgroundColor: categoryColors[mapCategory] }}
+              >
+                {selectedItem.code || "Info"}
+              </Badge>
+            </div>
+            {selectedItem.description && (
+              <p className="text-muted-foreground">{selectedItem.description}</p>
+            )}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+};

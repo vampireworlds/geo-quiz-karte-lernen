@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { geographyData } from "@/data/geographyData";
-import { SimpleMap } from "./SimpleMap";
+import { InteractiveMap } from "./InteractiveMap";
 
 export const StudyMode = () => {
   const [selectedCategory, setSelectedCategory] = useState<"oceans" | "countries" | "mountains">("oceans");
@@ -87,7 +87,7 @@ export const StudyMode = () => {
           </Card>
         )}
         
-        <SimpleMap selectedCategory={selectedCategory} />
+        <InteractiveMap selectedCategory={selectedCategory} />
       </div>
     </div>
   );
