@@ -64,18 +64,38 @@ export const InteractiveMap = ({
     });
   };
 
+  const initializeMap = () => {
+    if (!mapRef.current || mapInstance.current) return;
+
+    try {
+      // Initialize map
+      mapInstance.current = L.map(mapRef.current, {
+        zoomControl: true,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        touchZoom: true
+      }).setView([20, 0], 2);
+
+      // Add OpenStreetMap tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 10,
+        minZoom: 1
+      }).addTo(mapInstance.current);
+
+      // Force map to resize after a short delay
+      setTimeout(() => {
+        if (mapInstance.current) {
+          mapInstance.current.invalidateSize();
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Error initializing map:', error);
+    }
+  };
+
   useEffect(() => {
-    if (!mapRef.current) return;
-
-    // Initialize map
-    mapInstance.current = L.map(mapRef.current).setView([20, 0], 2);
-
-    // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 10,
-      minZoom: 1
-    }).addTo(mapInstance.current);
+    initializeMap();
 
     // Add global styles for tooltips and animations
     const style = document.createElement('style');
@@ -105,9 +125,20 @@ export const InteractiveMap = ({
         mapInstance.current = null;
       }
       // Clean up style
-      document.head.removeChild(style);
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
     };
   }, []);
+
+  // Force map refresh when disabled state changes
+  useEffect(() => {
+    if (mapInstance.current) {
+      setTimeout(() => {
+        mapInstance.current?.invalidateSize();
+      }, 100);
+    }
+  }, [disabled]);
 
   useEffect(() => {
     setMapCategory(selectedCategory);
@@ -152,6 +183,13 @@ export const InteractiveMap = ({
 
       markersRef.current.push(marker);
     });
+
+    // Force map refresh after adding markers
+    setTimeout(() => {
+      if (mapInstance.current) {
+        mapInstance.current.invalidateSize();
+      }
+    }, 50);
   }, [mapCategory, highlightTarget, onMapClick, disabled]);
 
   const handleCategoryChange = (category: "oceans" | "countries" | "mountains") => {
@@ -167,7 +205,7 @@ export const InteractiveMap = ({
           <div 
             ref={mapRef} 
             className={`h-96 w-full ${disabled ? 'pointer-events-none opacity-75' : 'cursor-crosshair'}`}
-            style={{ height: '400px' }}
+            style={{ height: '400px', minHeight: '400px' }}
           />
         </div>
         
@@ -198,7 +236,7 @@ export const InteractiveMap = ({
           <div 
             ref={mapRef} 
             className="h-96 w-full"
-            style={{ height: '400px' }}
+            style={{ height: '400px', minHeight: '400px' }}
           />
         </div>
         
